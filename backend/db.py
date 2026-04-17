@@ -16,7 +16,7 @@ def init_db():
                 caller_name TEXT,
                 required_info TEXT,
                 restrictions TEXT,
-                status TEXT DEFAULT pending,
+                status TEXT DEFAULT 'pending',
                 transcript TEXT,
                 report TEXT,
                 duration_seconds INTEGER,
@@ -44,7 +44,7 @@ def create_call(data: dict) -> dict:
         conn.execute(
             """INSERT INTO calls (id, phone, task, language, caller_name,
                required_info, restrictions, status, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, pending, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
             (call_id, data["phone"], data["task"], data.get("language", "auto"),
              data.get("caller_name"), data.get("required_info"),
              data.get("restrictions"), now)
