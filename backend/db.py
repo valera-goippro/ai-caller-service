@@ -20,7 +20,7 @@ def init_db():
                 transcript TEXT,
                 report TEXT,
                 duration_seconds INTEGER,
-                created_at TEXT DEFAULT (datetime(now)),
+                created_at TEXT,
                 completed_at TEXT
             )
         """)
