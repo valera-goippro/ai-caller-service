@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Caller</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f23; color: #e0e0e0; min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin: 20px 0; font-size: 2em; background: linear-gradient(135deg, #00d4ff, #7b2ff7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 30px; }
+        .card { background: #1a1a2e; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #2a2a4a; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; color: #aaa; font-size: 0.9em; }
+        input, textarea, select { width: 100%; padding: 12px; background: #0f0f23; border: 1px solid #3a3a5a; border-radius: 8px; color: #e0e0e0; font-size: 1em; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #00d4ff; }
+        textarea { resize: vertical; min-height: 80px; }
+        .btn { display: inline-block; padding: 14px 28px; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #7b2ff7); color: white; width: 100%; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-danger { background: #ff4444; color: white; padding: 10px 20px; font-size: 0.9em; }
+        .status-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
+        .status-pending { background: #2a2a4a; }
+        .status-dialing { background: #1a3a2a; animation: pulse 1.5s infinite; }
+        .status-in_progress { background: #1a2a3a; }
+        .status-completed { background: #1a3a1a; }
+        .status-failed { background: #3a1a1a; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-pending { background: #888; }
+        .dot-dialing { background: #44ff44; animation: pulse 1s infinite; }
+        .dot-in_progress { background: #44aaff; }
+        .dot-completed { background: #44ff44; }
+        .dot-failed { background: #ff4444; }
+        .transcript { max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.9em; line-height: 1.6; }
+        .transcript .ai { color: #00d4ff; }
+        .transcript .human { color: #ffaa44; }
+        .report { white-space: pre-wrap; line-height: 1.6; }
+        .history-item { padding: 12px; border-bottom: 1px solid #2a2a4a; cursor: pointer; transition: background 0.2s; }
+        .history-item:hover { background: #2a2a4a; }
+        .history-item:last-child { border-bottom: none; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; }
+        .badge-completed { background: #1a3a1a; color: #44ff44; }
+        .badge-failed { background: #3a1a1a; color: #ff4444; }
+        .badge-in_progress { background: #1a2a3a; color: #44aaff; }
+        .badge-pending { background: #2a2a4a; color: #888; }
+        .badge-dialing { background: #1a3a2a; color: #44ff44; }
+        .row { display: flex; gap: 12px; }
+        .row > * { flex: 1; }
+        .hidden { display: none; }
+        .tabs { display: flex; gap: 0; margin-bottom: 16px; }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: #888; transition: all 0.2s; }
+        .tab.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+        .tab:hover { color: #e0e0e0; }
+        .info { padding: 12px; background: #1a2a3a; border-radius: 8px; color: #88aacc; font-size: 0.9em; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Caller</h1>
+        <p class="subtitle">AI makes phone calls for you</p>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('new')">New Call</div>
+            <div class="tab" onclick="showTab('history')">History</div>
+        </div>
+
+        <!-- New Call Form -->
+        <div id="tab-new">
+            <div class="card">
+                <div class="form-group">
+                    <label>Phone number</label>
+                    <input type="tel" id="phone" placeholder="+351..." value="+351">
+                </div>
+                <div class="form-group">
+                    <label>Task — what should AI do/ask?</label>
+                    <textarea id="task" placeholder="Example: Call the restaurant and ask about working hours on Sunday, whether they have a table for 4 people at 8pm"></textarea>
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Language</label>
+                        <select id="language">
+                            <option value="auto">Auto-detect</option>
+                            <option value="ru">Russian</option>
+                            <option value="en">English</option>
+                            <option value="pt">Portuguese</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Introduce as</label>
+                        <input type="text" id="caller_name" placeholder="Optional name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Must find out (optional)</label>
+                    <input type="text" id="required_info" placeholder="e.g.: price, available dates">
+                </div>
+                <button class="btn btn-primary" id="btn-call" onclick="makeCall()">
+                    Call
+                </button>
+            </div>
+
+            <!-- Active Call Status -->
+            <div id="call-status" class="card hidden">
+                <div class="status-bar" id="status-bar">
+                    <div class="dot" id="status-dot"></div>
+                    <span id="status-text">Preparing...</span>
+                    <span style="margin-left:auto" id="call-duration"></span>
+                    <button class="btn btn-danger hidden" id="btn-stop" onclick="stopCall()">Hang up</button>
+                </div>
+                <div class="transcript" id="transcript"></div>
+            </div>
+
+            <!-- Report -->
+            <div id="call-report" class="card hidden">
+                <h3 style="margin-bottom:12px">Call Report</h3>
+                <div class="report" id="report"></div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div id="tab-history" class="hidden">
+            <div class="card">
+                <div id="history-list">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+        let currentCallId = null;
+        let ws = null;
+        let durationTimer = null;
+        let callStartTime = null;
+
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+            document.getElementById('tab-new').classList.toggle('hidden', name !== 'new');
+            document.getElementById('tab-history').classList.toggle('hidden', name !== 'history');
+            if (name === 'history') loadHistory();
+        }
+
+        async function makeCall() {
+            const phone = document.getElementById('phone').value.trim();
+            const task = document.getElementById('task').value.trim();
+            if (!phone || !task) { alert('Fill in phone and task'); return; }
+
+            const btn = document.getElementById('btn-call');
+            btn.disabled = true;
+            btn.textContent = 'Starting...';
+
+            try {
+                const resp = await fetch(API + '/api/calls', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone,
+                        task,
+                        language: document.getElementById('language').value,
+                        caller_name: document.getElementById('caller_name').value || null,
+                        required_info: document.getElementById('required_info').value || null,
+                    })
+                });
+                const call = await resp.json();
+                currentCallId = call.id;
+                showCallStatus(call);
+                connectWS(call.id);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Call';
+            }
+        }
+
+        function showCallStatus(call) {
+            document.getElementById('call-status').classList.remove('hidden');
+            document.getElementById('call-report').classList.add('hidden');
+            document.getElementById('transcript').innerHTML = '';
+            updateStatus(call.status);
+        }
+
+        function updateStatus(status) {
+            const bar = document.getElementById('status-bar');
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const stop = document.getElementById('btn-stop');
+
+            bar.className = 'status-bar status-' + status;
+            dot.className = 'dot dot-' + status;
+
+            const labels = {
+                pending: 'Preparing...',
+                dialing: 'Dialing...',
+                in_progress: 'Call in progress',
+                completed: 'Call completed',
+                failed: 'Call failed',
+                no_answer: 'No answer'
+            };
+            text.textContent = labels[status] || status;
+            stop.classList.toggle('hidden', !['dialing', 'in_progress'].includes(status));
+
+            if (status === 'in_progress' && !durationTimer) {
+                callStartTime = Date.now();
+                durationTimer = setInterval(() => {
+                    const s = Math.floor((Date.now() - callStartTime) / 1000);
+                    document.getElementById('call-duration').textContent =
+                        `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+                }, 1000);
+            }
+            if (['completed', 'failed', 'no_answer'].includes(status)) {
+                clearInterval(durationTimer);
+                durationTimer = null;
+            }
+        }
+
+        function connectWS(callId) {
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${proto}//${location.host}/ws/calls/${callId}`);
+            ws.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'status') updateStatus(msg.status);
+                if (msg.type === 'transcript') addTranscript(msg.role, msg.text);
+                if (msg.type === 'completed') showReport(msg);
+            };
+            ws.onclose = () => { setTimeout(() => loadCallDetails(callId), 2000); };
+        }
+
+        function addTranscript(role, text) {
+            const div = document.getElementById('transcript');
+            const cls = role === 'assistant' ? 'ai' : 'human';
+            const prefix = role === 'assistant' ? 'AI' : 'Person';
+            div.innerHTML += `<div class="${cls}"><b>${prefix}:</b> ${escHtml(text)}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function showReport(data) {
+            if (data.report) {
+                document.getElementById('call-report').classList.remove('hidden');
+                document.getElementById('report').textContent = data.report;
+            }
+            if (data.transcript) {
+                document.getElementById('transcript').innerHTML =
+                    `<pre>${escHtml(data.transcript)}</pre>`;
+            }
+        }
+
+        async function loadCallDetails(callId) {
+            const resp = await fetch(API + `/api/calls/${callId}/transcript`);
+            const data = await resp.json();
+            if (data.transcript) {
+                document.getElementById('transcript').innerHTML =
+                    `<pre>${escHtml(data.transcript)}</pre>`;
+            }
+            if (data.report) {
+                document.getElementById('call-report').classList.remove('hidden');
+                document.getElementById('report').textContent = data.report;
+            }
+        }
+
+        function stopCall() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'stop' }));
+            }
+        }
+
+        async function loadHistory() {
+            const resp = await fetch(API + '/api/calls');
+            const calls = await resp.json();
+            const list = document.getElementById('history-list');
+            if (!calls.length) { list.innerHTML = '<p style="color:#888">No calls yet</p>'; return; }
+            list.innerHTML = calls.map(c => `
+                <div class="history-item" onclick="viewCall('${c.id}')">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <b>${escHtml(c.phone)}</b>
+                        <span class="badge badge-${c.status}">${c.status}</span>
+                    </div>
+                    <div style="color:#888;font-size:0.85em;margin-top:4px">${escHtml(c.task.substring(0,80))}${c.task.length>80?'...':''}</div>
+                    <div style="color:#666;font-size:0.8em;margin-top:2px">${c.created_at}</div>
+                </div>
+            `).join('');
+        }
+
+        async function viewCall(id) {
+            showTab('new');
+            const resp = await fetch(API + `/api/calls/${id}`);
+            const call = await resp.json();
+            showCallStatus(call);
+            updateStatus(call.status);
+            await loadCallDetails(id);
+        }
+
+        function escHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+    </script>
+</body>
+</html>
